@@ -1,18 +1,20 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(rosserial_msgs)
 
-find_package(catkin REQUIRED COMPONENTS message_generation)
+find_package(rosidl_default_generators REQUIRED)
 
-add_message_files(FILES
-                  Log.msg
-                  TopicInfo.msg
-                 )
+set(msg_files
+  msg/Log.msg
+  msg/TopicInfo.msg
+)
 
-add_service_files(FILES
-                  RequestParam.srv
-                  RequestMessageInfo.srv
-                  RequestServiceInfo.srv
-                 )
+set(srv_files
+  srv/RequestParam.srv
+  srv/RequestMessageInfo.srv
+  srv/RequestServiceInfo.srv
+)
 
-generate_messages()
-catkin_package(CATKIN_DEPENDS message_runtime)
+rosidl_generate_interfaces(${PROJECT_NAME} ${msg_files} ${srv_files})
+ament_export_dependencies(rosidl_default_runtime)
+ament_package()
+
