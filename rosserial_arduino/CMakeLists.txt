@@ -1,34 +1,33 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5)
 project(rosserial_arduino)
 
-find_package(catkin REQUIRED COMPONENTS message_generation)
+find_package(rosidl_default_generators REQUIRED)
 
-add_message_files(FILES
-                  Adc.msg
-                 )
-
-add_service_files(FILES
-                  Test.srv
-                 )
-
-generate_messages()
-
-catkin_package(
-  CATKIN_DEPENDS message_runtime
-  CFG_EXTRAS rosserial_arduino-extras.cmake
+set(msg_files
+  msg/Adc.msg
 )
 
+set(srv_files
+  srv/Test.srv
+)
+
+rosidl_generate_interfaces(${PROJECT_NAME} ${msg_files} ${srv_files})
+
+ament_export_dependencies(rosidl_default_runtime)
+
+ament_package()
+
+# TODO(allenh1): consider moving the ros_lib into
+#  an include, as opposed to putting it where it
+#  was placed originally.
 install(DIRECTORY src/ros_lib
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/src
+  DESTINATION share/${PROJECT_NAME}/src
 )
 
 install(DIRECTORY arduino-cmake
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  DESTINATION share/${PROJECT_NAME}
 )
 
 install(PROGRAMS src/rosserial_arduino/make_libraries.py
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+  DESTINATION share/${PROJECT_NAME}
 )
-
-
-
