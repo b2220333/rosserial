@@ -1,4 +1,4 @@
-<package>
+<package format="2">
   <name>rosserial</name>
   <version>0.7.6</version>
   <description>
@@ -10,13 +10,15 @@
   <license>BSD</license>
   <url>http://ros.org/wiki/rosserial</url>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>ament_cmake_ros</buildtool_depend>
 
-  <run_depend>rosserial_msgs</run_depend>
-  <run_depend>rosserial_client</run_depend>
-  <run_depend>rosserial_python</run_depend>
+  <exec_depend>rosserial_msgs</exec_depend>
+  <exec_depend>rosserial_client</exec_depend>
+  <exec_depend>rosserial_python</exec_depend>
 
   <export>
-   <metapackage/>
+    <metapackage/>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>
