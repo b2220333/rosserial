@@ -35,28 +35,42 @@
 
 __author__ = "mferguson@willowgarage.com (Michael Ferguson)"
 
-import rospy
+import rclpy
 from rosserial_python import SerialClient, RosSerialServer
+from rosserial_python.nodes.message_info_service import loginfo, debuginfo
 from serial import SerialException
 from time import sleep
 import multiprocessing
-
+import argparse
 import sys
 
+
 if __name__=="__main__":
+    """
+    parser = argparse.ArgumentParser(description='ROS 2 Serial Python Node')
+    parser.add_argument('~port', default='/dev/ttyUSB0', help='where the device is')
+    parser.add_argument('~baud', default=57600, help='baud rate to communicate with the device')
+    parser.add_argument('/rosserial_embeddedlinux/tcp_port', default=11411, 'port on which to talk to the server')
+    parser.add_argument('/rosserial_embeddedlinux/fork_server', default=False, 'fork the server')
+    parser.parse_args()
+    """
+    rclpy.init(sys.argv)
+    rclpy.create_node("serial_node")
+    loginfo("ROS 2 Serial Python Node")
 
-    rospy.init_node("serial_node")
-    rospy.loginfo("ROS Serial Python Node")
-
-    port_name = rospy.get_param('~port','/dev/ttyUSB0')
-    baud = int(rospy.get_param('~baud','57600'))
+    # port_name = rclpy.get_param('~port','/dev/ttyUSB0')
+    port_name = '/dev/ttyUSB0'
+    # baud = int(rclpy.get_param('~baud','57600'))
+    baud = 57600
 
     # TODO: should these really be global?
-    tcp_portnum = int(rospy.get_param('/rosserial_embeddedlinux/tcp_port', '11411'))
-    fork_server = rospy.get_param('/rosserial_embeddedlinux/fork_server', False)
+    # tcp_portnum = int(rospy.get_param('/rosserial_embeddedlinux/tcp_port', '11411'))
+    tcp_portnum = 11411
+    # fork_server = rospy.get_param('/rosserial_embeddedlinux/fork_server', False)
+    fork_server = False
 
     # TODO: do we really want command line params in addition to parameter server params?
-    sys.argv = rospy.myargv(argv=sys.argv)
+    # sys.argv = rospy.myargv(argv=sys.argv)
     if len(sys.argv) >= 2 :
         port_name  = sys.argv[1]
     if len(sys.argv) == 3 :
@@ -68,18 +82,18 @@ if __name__=="__main__":
         try:
             server.listen()
         except KeyboardInterrupt:
-            rospy.loginfo("got keyboard interrupt")
+            loginfo("got keyboard interrupt")
         finally:
-            rospy.loginfo("Shutting down")
+            loginfo("Shutting down")
             for process in multiprocessing.active_children():
-                rospy.loginfo("Shutting down process %r", process)
+                loginfo("Shutting down process %r", process)
                 process.terminate()
                 process.join()
-            rospy.loginfo("All done")
+            loginfo("All done")
 
     else :          # Use serial port
-        while not rospy.is_shutdown():
-            rospy.loginfo("Connecting to %s at %d baud" % (port_name,baud) )
+        while rclpy.ok():
+            loginfo("Connecting to %s at %d baud" % (port_name,baud) )
             try:
                 client = SerialClient(port_name, baud)
                 client.run()
@@ -91,4 +105,3 @@ if __name__=="__main__":
             except OSError:
                 sleep(1.0)
                 continue
-

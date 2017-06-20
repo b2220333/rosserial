@@ -41,46 +41,70 @@ originating from microcontrollers.
 
 This allows rosserial_server to be distributed in binary form. """
 
-import rospy
+import rclpy
 from rosserial_msgs.srv import RequestMessageInfo
 from rosserial_msgs.srv import RequestServiceInfo
 from rosserial_python import load_message
 from rosserial_python import load_service
 
+try:
+    from termcolor import colored
+except ImportError as e:
+    def colored(string, color):
+        print(string)
+
+def loginfo(text):
+    """
+    TODO: rclpy.loginfo
+    """
+    print(colored(text, 'cyan'))
+
+
+def dbginfo(text):
+    """
+    TODO: rclpy.dbginfo
+    """
+    print(colored(text, 'yellow'))
+
 
 class MessageInfoService(object):
-  """  """
-  def __init__(self):
-    rospy.init_node("message_info_service")
-    rospy.loginfo("rosserial message_info_service node")
-    self.service = rospy.Service("message_info", RequestMessageInfo, self._message_info_cb)
-    self.serviceInfoService = rospy.Service("service_info", RequestServiceInfo, self._service_info_cb)
-    self.message_cache = {}
-    self.service_cache = {}
+  def __init__(self, args=None):
+      rclpy.init(args=args)
+      self.node = rclpy.create_node("message_info_service")
+      loginfo("rosserial message_info_service node")
+      self.service = node.create_service(RequestMessageInfo, "message_info", self._message_info_cb)
+      self.serviceInfoService = rospy.Service(RequestServiceInfo, "service_info", self._service_info_cb)
+      self.message_cache = {}
+      self.service_cache = {}
+
 
   def _message_info_cb(self, req):
-    package_message = tuple(req.type.split("/"))
-    if not self.message_cache.has_key(package_message):
-      rospy.loginfo("Loading module to return info on %s/%s." % package_message)
-      msg = load_message(*package_message)
-      self.message_cache[package_message] = (msg._md5sum, msg._full_text)
-    else:
-      rospy.loginfo("Returning info from cache on %s/%s." % package_message)
-    return self.message_cache[package_message]
+      package_message = tuple(req.type.split("/"))
+      if not self.message_cache.has_key(package_message):
+          loginfo("Loading module to return info on %s/%s." % package_message)
+          msg = load_message(*package_message)
+          self.message_cache[package_message] = (msg._md5sum, msg._full_text)
+      else:
+          loginfo("Returning info from cache on %s/%s." % package_message)
+          return self.message_cache[package_message]
+
 
   def _service_info_cb(self, req):
-    rospy.logdebug("req.service is %s" % req.service)
-    package_service = tuple(req.service.split("/"))
-    if not self.service_cache.has_key(package_service):
-      rospy.loginfo("Loading module to return info on service %s/%s." % package_service)
-      srv,mreq,mres = load_service(*package_service)
-      self.service_cache[package_service] = (srv._md5sum,mreq._md5sum,mres._md5sum)
-    else:
-      rospy.loginfo("Returning info from cache on %s/%s." % package_service)
-    return self.service_cache[package_service]
+      logdebug("req.service is %s" % req.service)
+      package_service = tuple(req.service.split("/"))
+      if not self.service_cache.has_key(package_service):
+          loginfo("Loading module to return info on service %s/%s." % package_service)
+          srv,mreq,mres = load_service(*package_service)
+          self.service_cache[package_service] = (srv._md5sum,mreq._md5sum,mres._md5sum)
+      else:
+          loginfo("Returning info from cache on %s/%s." % package_service)
+          return self.service_cache[package_service]
+
 
   def spin(self):
-    rospy.spin()
+      while rclpy.ok():
+          rclpy.spin_once(self.node)
+
 
 if __name__=="__main__":
-  MessageInfoService().spin()
+    MessageInfoService().spin()
