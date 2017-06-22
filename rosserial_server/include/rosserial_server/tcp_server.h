@@ -38,7 +38,7 @@
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
 #include "rosserial_server/session.h"
 

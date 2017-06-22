@@ -38,9 +38,9 @@
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
-#include "rosserial_server/session.h"
+#include <rosserial_server/session.h>
 
 namespace rosserial_server
 {
@@ -67,7 +67,7 @@ private:
 
     // Every second, check again if the connection should be reinitialized,
     // if the ROS node is still up.
-    if (ros::ok())
+    if (rclcpp::ok())
     {
       timer_.expires_from_now(boost::posix_time::milliseconds(2000));
       timer_.async_wait(boost::bind(&SerialSession::check_connection, this));

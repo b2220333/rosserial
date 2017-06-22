@@ -40,15 +40,15 @@
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
 
-#include <ros/callback_queue.h>
-#include <ros/ros.h>
-#include <rosserial_msgs/TopicInfo.h>
-#include <rosserial_msgs/Log.h>
-#include <topic_tools/shape_shifter.h>
-#include <std_msgs/Time.h>
+/* #include <ros/callback_queue.h> */
+#include <rclcpp/rclcpp.hpp>
+#include <rosserial_msgs/msg/topic_info.hpp>
+#include <rosserial_msgs/msg/log.hpp>
+/* #include <topic_tools/shape_shifter.h> */
+#include <builtin_interfaces/msg/time.hpp>
 
-#include "rosserial_server/async_read_buffer.h"
-#include "rosserial_server/topic_handlers.h"
+#include <rosserial_server/async_read_buffer.h>
+#include <rosserial_server/topic_handlers.h>
 
 namespace rosserial_server
 {
@@ -76,8 +76,6 @@ public:
     require_check_interval_ = boost::posix_time::milliseconds(1000);
     ros_spin_interval_ = boost::posix_time::milliseconds(10);
     require_param_name_ = "~require";
-
-    nh_.setCallbackQueue(&ros_callback_queue_);
 
     // Intermittent callback to service ROS callbacks. To avoid polling like this,
     // CallbackQueue could in the future be extended with a scheme to monitor for
@@ -116,9 +114,6 @@ public:
 
   void stop()
   {
-    // Abort any pending ROS callbacks.
-    ros_callback_queue_.clear();
-
     // Abort active session timer callbacks, if present.
     sync_timer_.cancel();
     require_check_timer_.cancel();
@@ -135,7 +130,7 @@ public:
     active_ = false;
   }
 
-  bool is_active()
+  const bool & is_active()
   {
     return active_;
   }
@@ -157,9 +152,7 @@ private:
    * io_service thread to avoid a concurrency nightmare.
    */
   void ros_spin_timeout(const boost::system::error_code& error) {
-    ros_callback_queue_.callAvailable();
-
-    if (ros::ok())
+    if (rclcpp::ok())
     {
       // Call again next interval.
       ros_spin_timer_.expires_from_now(ros_spin_interval_);
@@ -304,7 +297,7 @@ private:
   }
 
   void set_sync_timeout(const boost::posix_time::time_duration& interval) {
-    if (ros::ok())
+    if (rclcpp::ok())
     {
       sync_timer_.cancel();
       sync_timer_.expires_from_now(interval);

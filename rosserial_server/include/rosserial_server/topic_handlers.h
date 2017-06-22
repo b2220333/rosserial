@@ -35,44 +35,39 @@
 #ifndef ROSSERIAL_SERVER_TOPIC_HANDLERS_H
 #define ROSSERIAL_SERVER_TOPIC_HANDLERS_H
 
-#include <ros/ros.h>
-#include <rosserial_msgs/TopicInfo.h>
-#include <rosserial_msgs/RequestMessageInfo.h>
-#include <rosserial_msgs/RequestServiceInfo.h>
-#include <topic_tools/shape_shifter.h>
+#include <rclcpp/rclcpp.hpp>
+#include <rosserial_msgs/msg/topic_info.hpp>
+#include <rosserial_msgs/srv/request_message_info.hpp>
+#include <rosserial_msgs/srv/request_service_info.hpp>
+/* #include <topic_tools/shape_shifter.h> */
+
+#define ROS_WARN(stuff) std::cerr<<stuff<<std::endl;
+
+using RequestMessageInfo = rosserial_msgs::srv::RequestMessageInfo;
 
 namespace rosserial_server
 {
 
 class Publisher {
 public:
-  Publisher(ros::NodeHandle& nh, const rosserial_msgs::TopicInfo& topic_info) {
+  Publisher(auto & nh, const rosserial_msgs::TopicInfo& topic_info) {
     if (!message_service_.isValid()) {
-      // lazy-initialize the service caller.
-      message_service_ = nh.serviceClient<rosserial_msgs::RequestMessageInfo>("message_info");
-      if (!message_service_.waitForExistence(ros::Duration(5.0))) {
-        ROS_WARN("Timed out waiting for message_info service to become available.");
-      }
+      message_service_ = nh->create_client<>("message_info");
     }
 
-    rosserial_msgs::RequestMessageInfo info;
+    auto info = std::make_shared<RequestMessageInfo::Request>();
     info.request.type = topic_info.message_type;
-    if (message_service_.call(info)) {
-      if (info.response.md5 != topic_info.md5sum) {
-        ROS_WARN_STREAM("Message" << topic_info.message_type  << "MD5 sum from client does not match that in system. Will avoid using system's message definition.");
-        info.response.definition = "";
-      }
-    } else {
-      ROS_WARN("Failed to call message_info service. Proceeding without full message definition.");
+    auto result_future = nh->async_send_request(info);
+    if (rclcpp::spin_until_future_complete(nh, result_future) != rclcpp::executor::FutureREturnCode::SUCCESS) {
+      std::cerr<<"Message"<<topic_info.message_type
+               <<"MD5 sum from client does not match that in system."
+               <<"Will avoid using system's message definition."
+               <<std::endl;
     }
-
-    message_.morph(topic_info.md5sum, topic_info.message_type, info.response.definition, "false");
-    publisher_ = message_.advertise(nh, topic_info.topic_name, 1);
   }
 
-  void handle(ros::serialization::IStream stream) {
-    ros::serialization::Serializer<topic_tools::ShapeShifter>::read(stream, message_);
-    publisher_.publish(message_);
+  void handle(std::istream & stream) {
+    publisher_.publish(stream.str());
   }
 
   std::string get_topic() {
@@ -80,10 +75,8 @@ public:
   }
 
 private:
-  ros::Publisher publisher_;
-  topic_tools::ShapeShifter message_;
-
-  static ros::ServiceClient message_service_;
+  rclcpp::Publisher publisher_;
+  static rclcpp::ServiceClient message_service_;
 };
 
 ros::ServiceClient Publisher::message_service_;
@@ -93,11 +86,11 @@ typedef boost::shared_ptr<Publisher> PublisherPtr;
 class Subscriber {
 public:
   Subscriber(ros::NodeHandle& nh, rosserial_msgs::TopicInfo& topic_info,
-      boost::function<void(std::vector<uint8_t>& buffer)> write_fn)
+      std::function<void(std::vector<uint8_t>& buffer)> write_fn)
     : write_fn_(write_fn) {
     ros::SubscribeOptions opts;
     opts.init<topic_tools::ShapeShifter>(
-        topic_info.topic_name, 1, boost::bind(&Subscriber::handle, this, _1));
+        topic_info.topic_name, 1, std::bind(&Subscriber::handle, this, _1));
     opts.md5sum = topic_info.md5sum;
     opts.datatype = topic_info.message_type;
     subscriber_ = nh.subscribe(opts);
@@ -108,11 +101,11 @@ public:
   }
 
 private:
-  void handle(const boost::shared_ptr<topic_tools::ShapeShifter const>& msg) {
+  void handle(const std::shared_ptr<topic_tools::ShapeShifter const>& msg) {
     size_t length = ros::serialization::serializationLength(*msg);
     std::vector<uint8_t> buffer(length);
 
-    ros::serialization::OStream ostream(&buffer[0], length);
+    std::ostream ostream(&buffer[0], length);
     ros::serialization::Serializer<topic_tools::ShapeShifter>::write(ostream, *msg);
 
     write_fn_(buffer);
@@ -127,13 +120,13 @@ typedef boost::shared_ptr<Subscriber> SubscriberPtr;
 class ServiceClient {
 public:
   ServiceClient(ros::NodeHandle& nh, rosserial_msgs::TopicInfo& topic_info,
-      boost::function<void(std::vector<uint8_t>& buffer, const uint16_t topic_id)> write_fn)
+      std::function<void(std::vector<uint8_t>& buffer, const uint16_t topic_id)> write_fn)
     : write_fn_(write_fn) {
     topic_id_ = -1;
     if (!service_info_service_.isValid()) {
       // lazy-initialize the service caller.
       service_info_service_ = nh.serviceClient<rosserial_msgs::RequestServiceInfo>("service_info");
-      if (!service_info_service_.waitForExistence(ros::Duration(5.0))) {
+      if (!service_info_service_.waitForExistence(rclcpp::Duration(5.0))) {
         ROS_WARN("Timed out waiting for service_info service to become available.");
       }
     }
@@ -175,8 +168,8 @@ public:
     // write service response over the wire
     size_t length = ros::serialization::serializationLength(response_message_);
     std::vector<uint8_t> buffer(length);
-    ros::serialization::OStream ostream(&buffer[0], length);
-    ros::serialization::Serializer<topic_tools::ShapeShifter>::write(ostream, response_message_);
+    std::ostream ostream(&buffer[0], length);
+    response_message_ = ostream.str();
     write_fn_(buffer,topic_id_);
   }
 
@@ -185,7 +178,7 @@ private:
   topic_tools::ShapeShifter response_message_;
   ros::ServiceClient service_client_;
   static ros::ServiceClient service_info_service_;
-  boost::function<void(std::vector<uint8_t>& buffer, const uint16_t topic_id)> write_fn_;
+  std::function<void(std::vector<uint8_t>& buffer, const uint16_t topic_id)> write_fn_;
   std::string service_md5_;
   std::string request_message_md5_;
   std::string response_message_md5_;
@@ -193,7 +186,7 @@ private:
 };
 
 ros::ServiceClient ServiceClient::service_info_service_;
-typedef boost::shared_ptr<ServiceClient> ServiceClientPtr;
+typedef std::shared_ptr<ServiceClient> ServiceClientPtr;
 
 }  // namespace
 

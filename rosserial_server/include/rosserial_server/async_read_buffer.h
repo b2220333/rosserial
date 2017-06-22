@@ -33,13 +33,18 @@
 
 #ifndef ROSSERIAL_SERVER_ASYNC_READ_BUFFER_H
 #define ROSSERIAL_SERVER_ASYNC_READ_BUFFER_H
-
+#define ROS_DEBUG_STREAM_NAMED(name, stream) \
+    std::cout<<name<<": "<<stream
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/function.hpp>
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 
+#include <functional>
+#include <sstream>
+#include <istream>
+#include <memory>
 namespace rosserial_server
 {
 
@@ -48,31 +53,31 @@ class AsyncReadBuffer
 {
 public:
   AsyncReadBuffer(AsyncReadStream& s, size_t capacity,
-                  boost::function<void(const boost::system::error_code&)> error_callback)
+                  std::function<void(const boost::system::error_code&)> error_callback)
        : stream_(s), read_requested_bytes_(0), error_callback_(error_callback) {
     reset();
     mem_.resize(capacity);
-    ROS_ASSERT_MSG(error_callback_, "Bad error callback passed to read buffer.");
+    /* ROS_ASSERT_MSG(error_callback_, "Bad error callback passed to read buffer."); */
   }
 
   /**
    * @brief Commands a fixed number of bytes from the buffer. This may be fulfilled from existing
    *        buffer content, or following a hardware read if required.
    */
-  void read(size_t requested_bytes, boost::function<void(ros::serialization::IStream&)> callback) {
-    ROS_DEBUG_STREAM_NAMED("async_read", "Buffer read of " << requested_bytes << " bytes, " <<
-                           "wi: " << write_index_ << ", ri: " << read_index_);
+  void read(size_t requested_bytes, std::function<void(std::istream&)> callback) {
+    std::cout<<"Buffer read of " << requested_bytes << " bytes, "
+             <<"wi: " << write_index_ << ", ri: " << read_index_<<std::endl;
 
-    ROS_ASSERT_MSG(read_requested_bytes_ == 0, "Bytes requested is nonzero, is there an operation already pending?");
-    ROS_ASSERT_MSG(callback, "Bad read success callback function.");
+    /* ROS_ASSERT_MSG(read_requested_bytes_ == 0, "Bytes requested is nonzero, is there an operation already pending?"); */
+    /* ROS_ASSERT_MSG(callback, "Bad read success callback function."); */
     read_success_callback_ = callback;
     read_requested_bytes_ = requested_bytes;
 
     if (read_requested_bytes_ > mem_.size())
     {
       // Insufficient room in the buffer for the requested bytes,
-      ROS_ERROR_STREAM_NAMED("async_read", "Requested to read " << read_requested_bytes_ <<
-                             " bytes, but buffer capacity is only " << mem_.size() << ".");
+        std::cout<<"async_read: Requested to read " << read_requested_bytes_
+                 <<" bytes, but buffer capacity is only " << mem_.size() << "."<<std::endl;
       error_callback_(boost::system::errc::make_error_code(boost::system::errc::no_buffer_space));
       return;
     }
@@ -91,7 +96,7 @@ public:
       }
 
       // Initiate a read from hardware so that we have enough bytes to fill the user request.
-      ROS_DEBUG_STREAM_NAMED("async_read", "Requesting transfer of at least " << transfer_bytes << " byte(s).");
+      std::cout<<"async_read: Requesting transfer of at least " << transfer_bytes << " byte(s)."<<std::endl;
       boost::asio::async_read(stream_,
           boost::asio::buffer(&mem_[write_index_], bytesHeadroom()),
           boost::asio::transfer_at_least(transfer_bytes),
@@ -132,8 +137,8 @@ private:
     if (error)
     {
       read_requested_bytes_ = 0;
-      read_success_callback_.clear();
-      ROS_DEBUG_STREAM_NAMED("async_read", "Read operation failed with: " << error);
+      /* read_success_callback_.clear(); */
+      std::cout<<"async_read: Read operation failed with: " << error<<std::endl;
 
       if (error == boost::asio::error::operation_aborted)
       {
@@ -161,16 +166,16 @@ private:
     ROS_DEBUG_STREAM_NAMED("async_read", "Invoking success callback with buffer of requested size " <<
                            read_requested_bytes_ << " byte(s).");
 
-    ros::serialization::IStream stream(&mem_[read_index_], read_requested_bytes_);
+    std::istream stream(&mem_[read_index_], read_requested_bytes_);
     read_index_ += read_requested_bytes_;
 
     // Post the callback rather than executing it here so, so that we have a chance to do the cleanup
     // below prior to it actually getting run, in the event that the callback queues up another read.
-    stream_.get_io_service().post(boost::bind(read_success_callback_, stream));
+    stream_.get_io_service().post(std::bind(read_success_callback_, stream));
 
     // Resetting these values clears our state so that we know there isn't a callback pending.
     read_requested_bytes_ = 0;
-    read_success_callback_.clear();
+    /* read_success_callback_.clear(); */
 
     if (bytesAvailable() == 0)
     {
@@ -184,9 +189,8 @@ private:
 
   size_t write_index_;
   size_t read_index_;
-  boost::function<void(const boost::system::error_code&)> error_callback_;
-
-  boost::function<void(ros::serialization::IStream&)> read_success_callback_;
+  std::function<void(const boost::system::error_code&)> error_callback_;
+  std::function<void(std::istream&)> read_success_callback_;
   size_t read_requested_bytes_;
 };
 

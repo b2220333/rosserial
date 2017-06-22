@@ -35,19 +35,17 @@
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 
-#include <ros/ros.h>
-
-#include "rosserial_server/serial_session.h"
-
+#include <rclcpp/rclcpp.hpp>
+#include <rosserial_server/serial_session.h>
 
 int main(int argc, char* argv[])
 {
-  ros::init(argc, argv, "rosserial_server_serial_node");
-
+  rclcpp::init(argc, argv);
+  auto node = rclcpp::node::Node::make_shared("rosserial_server_serial_node");
   std::string port;
   int baud;
-  ros::param::param<std::string>("~port", port, "/dev/ttyACM0");
-  ros::param::param<int>("~baud", baud, 57600);
+  node->get_parameter_or("~port", port, "/dev/ttyACM0");
+  node->get_parameter_or("~baud", baud, 57600);
 
   boost::asio::io_service io_service;
   rosserial_server::SerialSession serial_session(io_service, port, baud);

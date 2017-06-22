@@ -35,17 +35,15 @@
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 
-#include <ros/ros.h>
-
 #include "rosserial_server/tcp_server.h"
 
 
 int main(int argc, char* argv[])
 {
-  ros::init(argc, argv, "rosserial_server_socket_node");
-
+  rclcpp::init(argc, argv);
+  node = rclcpp::node::Node::make_shared("rosserial_server_socket_node");
   int port;
-  ros::param::param<int>("~port", port, 11411);
+  node->get_parameter_or("~port", port, 11411);
 
   boost::asio::io_service io_service;
   rosserial_server::TcpServer<> tcp_server(io_service, port);

@@ -34,10 +34,7 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
-
-#include <ros/ros.h>
-
-#include "rosserial_server/udp_socket_session.h"
+#include <rosserial_server/udp_socket_session.h>
 
 using boost::asio::ip::udp;
 using boost::asio::ip::address;
