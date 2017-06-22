@@ -29,7 +29,7 @@ setup(
     entry_points={
         'console_scripts': [
             'message_info_service = nodes.message_info_service:main',
-            'serial_node = nodes.serial_node:main',            
+            'serial_node = nodes.serial_node:main',
         ]
     },
 )

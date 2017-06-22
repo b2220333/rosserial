@@ -44,27 +44,7 @@ This allows rosserial_server to be distributed in binary form. """
 import rclpy
 from rosserial_msgs.srv import RequestMessageInfo
 from rosserial_msgs.srv import RequestServiceInfo
-from rosserial_python import load_message
-from rosserial_python import load_service
-
-try:
-    from termcolor import colored
-except ImportError as e:
-    def colored(string, color):
-        print(string)
-
-def loginfo(text):
-    """
-    TODO: rclpy.loginfo
-    """
-    print(colored(text, 'cyan'))
-
-
-def dbginfo(text):
-    """
-    TODO: rclpy.dbginfo
-    """
-    print(colored(text, 'yellow'))
+from rosserial_python.SerialClient import loginfo, dbginfo, load_message, load_service
 
 
 class MessageInfoService(object):

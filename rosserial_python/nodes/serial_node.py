@@ -37,7 +37,7 @@ __author__ = "mferguson@willowgarage.com (Michael Ferguson)"
 
 import rclpy
 from rosserial_python import SerialClient, RosSerialServer
-from rosserial_python.nodes.message_info_service import loginfo, debuginfo
+from rosserial_python.rosserial_python.SerialClient import loginfo, dbginfo
 from serial import SerialException
 from time import sleep
 import multiprocessing
@@ -45,7 +45,7 @@ import argparse
 import sys
 
 
-if __name__=="__main__":
+def main():
     """
     parser = argparse.ArgumentParser(description='ROS 2 Serial Python Node')
     parser.add_argument('~port', default='/dev/ttyUSB0', help='where the device is')
@@ -54,7 +54,7 @@ if __name__=="__main__":
     parser.add_argument('/rosserial_embeddedlinux/fork_server', default=False, 'fork the server')
     parser.parse_args()
     """
-    rclpy.init(sys.argv)
+    rclpy.init()
     rclpy.create_node("serial_node")
     loginfo("ROS 2 Serial Python Node")
 
@@ -74,7 +74,7 @@ if __name__=="__main__":
     if len(sys.argv) >= 2 :
         port_name  = sys.argv[1]
     if len(sys.argv) == 3 :
-        tcp_portnum = int(sys.argv[2])
+        baud = int(sys.argv[2])
 
     if port_name == "tcp" :
         server = RosSerialServer(tcp_portnum, fork_server)
